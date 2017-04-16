@@ -29,6 +29,8 @@
 #define CR_FALSE "@F"
 #define CR_L1    "@ON_T"
 #define CR_L0    "@ON_F"
+#define DEC_MEM  "$B"
+#define DEC_REG  "RTMP"
 
 /*
 ***** Б а з а  данных компилятора
@@ -1102,6 +1104,14 @@ int ODC1 ()
     goto ODC11;                                   /* идем на продолжение об-*/
 						  /* работки, а             */
    }
+   else if ( !strcmp ( FORMT [2], "DEC" ) &&       /* если идентификатор оп- */
+      !strcmp ( FORMT [3], "FIXED" ) )/* ределен как bin fixed, */
+   {
+    SYM [ISYM].TYPE = 'D';                        /* то устанавливаем тип   */
+              /* идентификатора = 'B' и */
+    goto ODC11;                                   /* идем на продолжение об-*/
+              /* работки, а             */
+   }
   else                                            /* иначе                  */
    {
     SYM [ISYM].TYPE = 'U';                        /* устанавливаем тип иден-*/
@@ -1392,6 +1402,10 @@ int AVI2 ()
 	    return 0;                             /* успешное завершение    */
 						  /* пограммы               */
 	   }
+     else if (SYM [i].TYPE == 'D' && STROKA [ DST [I2].DST4 - strlen ( FORMT [IFORMT-1] ) ] ==  '=') {
+            add_logical_epression_bin_dec(SYM[i-1].NAME, "RRAB", SYM[i].NAME, DEC_REG, DEC_MEM, SYM[i+1].NAME);
+            return 0;
+          }
 	  else
 	   return 3;                              /* если тип правого опе-  */
 						  /* ранда арифметического  */
@@ -1589,10 +1603,29 @@ int OEN2 ()
 		 "Определение переменной", 22 );  /* тария                  */
 
 	ZKARD ();                                 /* запомнить операцию     */
-						  /*    Ассемблера          */
-       }
+       } 
+       else if (SYM [i].TYPE == 'D') 
+       {
+        printf ("DEC - %s", SYM [i].NAME);
+  strcpy ( ASS_CARD._BUFCARD.METKA, SYM [i].NAME );
+        ASS_CARD._BUFCARD.METKA [ strlen ( ASS_CARD._BUFCARD.METKA ) ] = ' '; 
+        memcpy ( ASS_CARD._BUFCARD.OPERAC, "DC", 2 );  
+  strcpy ( ASS_CARD._BUFCARD.OPERAND, "PL3\'");
+  strcat(ASS_CARD._BUFCARD.OPERAND, gcvt(VALUE(SYM[i].INIT), 10, &RAB[0]));
+        ASS_CARD._BUFCARD.OPERAND [ strlen ( ASS_CARD._BUFCARD.OPERAND ) ] = '\'';
+  memcpy ( ASS_CARD._BUFCARD.COMM,          /* поле построчного комен-*/
+                 "Определение переменной", 22 );  /* тария                  */
+        ZKARD ();
+      }
      }
    }
+   
+  /* добавим TRUE и FALSE */
+
+  add_asm_command (CR_FALSE, "DC", "H\'0\'");
+  add_asm_command ("", "DS", "0F");
+  add_asm_command (DEC_MEM, "DC", "PL8\'0\'");
+  add_asm_command (CR_TRUE, "DC", "H\'1\'");
 						  /* далее идет блок декла- */
 						  /* ративных ассемблеровс- */
 						  /* ких EQU-операторов, оп-*/
@@ -1684,10 +1717,10 @@ int OPA2 ()
 	    return 0;                             /* завершить программу    */
 	   }
 
-	  else                                    /* если идентификатор не  */
-						  /* имеет тип bin fixed,то:*/
-	   return 3;                              /* завершение с диагности-*/
-						  /* кой ошибки             */
+    else if (SYM [i].TYPE == 'D') {
+            return 0;
+          } 
+          else return 3; 
        }
    }
   return 4;                                       /* если идентификатор ра- */
