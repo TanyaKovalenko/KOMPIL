@@ -12,6 +12,6 @@ kompassr.exe: kompassr.c
 	@echo "____________________________________________________________"
 absloadm.exe: absloadm.c
 	@echo "________a b s l o a d m . e x e    g e n e r a t i o n______"
-	gcc -lncurses -o absloadm.exe absloadm.c
+	gcc -o absloadm.exe absloadm.c -lncurses
 	@echo "____________________________________________________________"
 
