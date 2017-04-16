@@ -1127,7 +1127,7 @@ ODC11:
        //set the default dimentional
        if (SYM [ISYM].TYPE == 'B')
        {
-       	strcpy (SYM [ISYM].RAZR, "31");
+       	strcpy (SYM [ISYM].RAZR, "15");
        }
        else
        {
