@@ -25,6 +25,11 @@
 						  /* мента исх.текста;      */
 #define NSYM      100                             /* - таблицы имен и меток */
 
+#define CR_TRUE  "@T"
+#define CR_FALSE "@F"
+#define CR_L1    "@ON_T"
+#define CR_L0    "@ON_F"
+
 /*
 ***** Б а з а  данных компилятора
 */
@@ -1875,6 +1880,42 @@ void add_asm_command (const char* label,
   memcpy ( ASS_CARD._BUFCARD.OPERAND, operands,  strlen(operands)); 
 						 
   ZKARD ();                 
+}
+
+void add_logical_epression_bin_dec (
+                                     const char* ide_1,  // bin
+                                     const char* reg_1,
+                                     const char* ide_2,  // dec
+                                     const char* reg_2,
+                                     const char* dec_mem,
+                                     const char* ide_res // bin
+                                   )
+// --> result in reg_1 
+{
+    char operands [16];
+    
+    // load ide 2 in memory
+    sprintf (operands, "%s+5(3),%s", dec_mem, ide_2);
+    add_asm_command ("", "MVC", operands);
+    // load ide 1 in register
+    sprintf (operands, "%s,%s", reg_2, dec_mem);
+    add_asm_command ("", "CVB", operands);
+    // compare
+    sprintf (operands, "%s,%s", reg_1, reg_2);
+    add_asm_command ("", "CR", operands);
+    // if true
+    add_asm_command ("", "BC", "8," CR_L1);       // ---
+    // if false - load false in operand                |
+    sprintf (operands, "%s,%s", reg_1, CR_FALSE); //   |
+    add_asm_command ("", "LH", operands);         //   |
+    // go to res0                                      |
+    add_asm_command ("", "BC", "15," CR_L0);      // ->|
+    // if true                                         |
+    sprintf (operands, "%s,%s", reg_1, CR_TRUE);  //   |
+    add_asm_command (CR_L1, "LH", operands);      //<- |
+    // load in res variable                       //   
+    sprintf (operands, "%s,%s", reg_1, ide_res);  //   
+    add_asm_command (CR_L0, "STH", operands);     // 
 }
 
 /*..........................................................................*/
