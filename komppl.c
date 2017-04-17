@@ -439,7 +439,7 @@ struct
  /* for equal */
 
  {/*.  235     .*/   236 ,     0 , "=  " ,    0 },
- {/*.  236     .*/   237 ,   235 , "ZNK" ,    0 },
+ {/*.  236     .*/   237 ,   235 , "ZNK" ,  238 },
  {/*.  237     .*/     0 ,   236 , "*  " ,    0 },
 
  /* for paranthesis */
@@ -1377,13 +1377,31 @@ int AVI2 ()
 		 memcpy( ASS_CARD._BUFCARD.OPERAC,/* иначе - "S"            */
 					 "S", 1 );
 	       }
-
+		
 	      else
+
+	     {
+		if (( STROKA [ DST [I2].DST4 -       /* если же знак операции  */
+                 strlen ( FORMT [IFORMT-1] ) ] == /* арифметического выра-  */
+                                             '*' ))/* жения "-", то:         */
+
+               {
+                //if ( strcmp ( SYM [i].RAZR, "15" )/* при разрядности ариф-  */
+                //                            <= 0 )/* метич.выраж.<= 15      */
+                 memcpy( ASS_CARD._BUFCARD.OPERAC,/* формируем код ассембле-*/
+                                        "MP", 2 );/* ровской операции "SH",F*/
+                //else
+                 //memcpy( ASS_CARD._BUFCARD.OPERAC,/* иначе - "S"            */
+                   //                      "MP", 2 );
+               }
+		else
 
 	       return 5;                          /* если знак операции не  */
 						  /* "+" и не "-", то завер-*/
 						  /* шение  программы  по   */
 						  /* ошибке                 */
+	     }
+	      
 	     }
 						  /* формируем:             */
 	    strcpy ( ASS_CARD._BUFCARD.OPERAND,   /* - первый операнд ассем-*/
@@ -1406,7 +1424,23 @@ int AVI2 ()
             add_logical_epression_bin_dec(SYM[i-1].NAME, "RRAB", SYM[i].NAME, DEC_REG, DEC_MEM, SYM[i+1].NAME);
             return 0;
           }
-	  else
+	
+	  else if ((SYM [i].TYPE == 'D') && ( STROKA [ DST [I2].DST4 -       /* если же знак операции  */
+                 strlen ( FORMT [IFORMT-1] ) ] == /* арифметического выра-  */
+                                             '*' ))/* жения "-", то:         */
+
+               {
+                //if ( strcmp ( SYM [i].RAZR, "15" )/* при разрядности ариф-  */
+                //                            <= 0 )/* метич.выраж.<= 15      */
+                 memcpy( ASS_CARD._BUFCARD.OPERAC,/* формируем код ассембле-*/
+                                        "MP", 2 );/* ровской операции "SH",F*/
+                //else
+                 //memcpy( ASS_CARD._BUFCARD.OPERAC,/* иначе - "S"            */
+                   //                      "MP", 2 );
+               }
+
+              else
+
 	   return 3;                              /* если тип правого опе-  */
 						  /* ранда арифметического  */
 						  /* выражения не bin fixed,*/
