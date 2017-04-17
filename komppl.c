@@ -27,6 +27,7 @@
 
 #define CR_TRUE  "@T"
 #define CR_FALSE "@F"
+#define CR_5 "@5"
 #define CR_L1    "@ON_T"
 #define CR_L0    "@ON_F"
 #define DEC_MEM  "$B"
@@ -1663,6 +1664,7 @@ int OEN2 ()
   add_asm_command ("", "DS", "0F");
   add_asm_command (DEC_MEM, "DC", "PL8\'0\'");
   add_asm_command (CR_TRUE, "DC", "H\'1\'");
+  add_asm_command (CR_5, "DC", "PL3\'5\'");
 						  /* далее идет блок декла- */
 						  /* ративных ассемблеровс- */
 						  /* ких EQU-операторов, оп-*/
