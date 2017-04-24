@@ -350,7 +350,7 @@ struct
  {/*.  166     .*/   167 ,   165 , "LIT" ,  168 },
  {/*.  167     .*/   197 ,   166 , "AVI" ,    0 },
 
- {/*.  168     .*/   169 ,   165 , "IPE" ,  243 },
+ {/*.  168     .*/   169 ,   165 , "IPE" ,  238 },
  {/*.  169     .*/   170 ,   168 , "AVI" ,    0 },
  {/*.  170     .*/     0 ,   169 , "*  " ,    0 },
 
@@ -445,16 +445,13 @@ struct
 
  /* for paranthesis */
  
- {/*.  238     .*/   239 ,   235 , "(  " ,    0 },
+ {/*.  238     .*/   239 ,   235 , "CIF" ,  241 },
  {/*.  239     .*/   240 ,   239 , "AVI" ,    0 },
- {/*.  240     .*/   241 ,   240 , ")  " ,    0 },
+ {/*.  240     .*/     0 ,   240 , "*  " ,    0 },
+
  {/*.  241     .*/   242 ,   241 , "AVI" ,    0 },
- {/*.  242     .*/     0 ,   242 , "*  " ,    0 },
-
- {/*.  243     .*/   244 ,     0 , "CIF" ,    0 },
- {/*.  244     .*/   245 ,   243 , "AVI" ,    0 },
- {/*.  245     .*/     0 ,   244 , "*  " ,    0 }
-
+ {/*.  242     .*/   243 ,   242 , "AVI" ,    0 },
+ {/*.  243     .*/   244 ,     0 , "*  " ,    0 }
 };
 
 /*
@@ -1338,6 +1335,7 @@ int AVI2 ()
 	   {	    
 	    return 0;                             /* завершить программу    */
 	   } 
+	   printf("Olo");
 	   return 3;                              /* если тип терма не bin/dec  */
 						  /* fixed,то выход по ошиб-*/
 						  /* ке                     */
@@ -1393,7 +1391,38 @@ int AVI2 ()
 	       }
 		
 		else
-	       return 5;  
+		{
+		 if ( STROKA [ DST [I2].DST4 -       /* если же знак операции  */
+		 	strlen ( FORMT [IFORMT-1] ) ] == /* арифметического выра-  */
+					     '=' )/* жения "-", то:         */
+
+	         { 
+		  if ( strcmp ( SYM [i].RAZR, "15" )/* при разрядности ариф-  */
+					    <= 0 )/* метич.выраж.<= 15      */
+		    memcpy( ASS_CARD._BUFCARD.OPERAC,/* формируем код ассембле-*/
+					"LH", 2 );/* ровской операции "SH",F*/
+		  else
+		    memcpy( ASS_CARD._BUFCARD.OPERAC,/* иначе - "S"            */
+					 "L", 1 );
+	          strcpy ( ASS_CARD._BUFCARD.OPERAND,   /* - первый операнд ассем-*/
+					"RTMP," );/*блеровской операции;    */
+		  strcat ( ASS_CARD._BUFCARD.OPERAND,   /* - второй операнд ассем-*/
+				       FORMT [IFORMT-1] );/*блеровской операции;    */
+		  ASS_CARD._BUFCARD.OPERAND [ strlen
+			  ( ASS_CARD._BUFCARD.OPERAND )] =/* - разделяющий пробел;  */
+						      ' ';
+		  memcpy ( ASS_CARD._BUFCARD.COMM,
+		   "Формирование промежуточного значения",/* - построчный коментарий*/
+						     36 );
+                  ZKARD ();
+		  add_compare(SYM[i].NAME, "RRAB", "RTMP", SYM[i+1].NAME);  
+		  ZKARD ();                             /* запоминание ассембле-  */
+							  /* ровской операции       */
+		  return 0;
+		 }
+		 else
+	       	  return 5; 
+		} 
 	     
 	     }
 	                                          /* если знак операции не  */
@@ -1437,13 +1466,14 @@ int AVI2 ()
      		{
 			if (SYM[i].NAME[0] == FORMT[IFORMT-2][0] && SYM[i].TYPE == 'D')
 			{
+
 				isDEC = 1;
 			}
 		}
 		if (isDEC == 1)
 		{
 			add_mult_expression(FORMT [IFORMT-2], CR_5);
-		     	add_logical_epression_bin_dec(SYM[i-1].NAME, "RRAB", SYM[i].NAME, DEC_REG, DEC_MEM, SYM[i+1].NAME);   
+		     	add_logical_epression_bin_dec(SYM[i].NAME, "RRAB", DEC_MEM);   
 		     	return 0;
 		}
 		else
@@ -1967,12 +1997,9 @@ void add_mult_expression (
 }
 
 void add_logical_epression_bin_dec (
-                                     const char* ide_1,  // bin
-                                     const char* reg_1,
                                      const char* ide_2,  // dec
                                      const char* reg_2,
-                                     const char* dec_mem,
-                                     const char* ide_res // bin
+                                     const char* dec_mem
                                    )
 // --> result in reg_1 
 {
@@ -1984,6 +2011,18 @@ void add_logical_epression_bin_dec (
     // load ide 1 in register
     sprintf (operands, "%s,%s", reg_2, dec_mem);
     add_asm_command ("", "CVB", operands);
+}
+
+void add_compare (
+                                     const char* ide_1,  // bin
+                                     const char* reg_1,
+                                     const char* reg_2,
+                                     const char* ide_res // bin
+                                   )
+// --> result in reg_1 
+{
+    char operands [16];
+    
     // compare
     sprintf (operands, "%s,%s", reg_1, reg_2);
     add_asm_command ("", "CR", operands);
@@ -2001,7 +2040,6 @@ void add_logical_epression_bin_dec (
     sprintf (operands, "%s,%s", reg_1, ide_res);  //   
     add_asm_command (CR_L0, "STH", operands);     // 
 }
-
 /*..........................................................................*/
 
 						  /*  п р о г р а м м а,    */
