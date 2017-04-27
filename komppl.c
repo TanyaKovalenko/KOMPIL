@@ -1414,8 +1414,8 @@ int AVI2 ()
 		  memcpy ( ASS_CARD._BUFCARD.COMM,
 		   "Формирование промежуточного значения",/* - построчный коментарий*/
 						     36 );
-                  ZKARD ();
-		  add_compare(SYM[i].NAME, "RRAB", "RTMP", SYM[i+1].NAME);  
+		  ZKARD ();
+		  add_compare(SYM[i].NAME, "RRAB", "RTMP");  
 		  ZKARD ();                             /* запоминание ассембле-  */
 							  /* ровской операции       */
 		  return 0;
@@ -2016,8 +2016,7 @@ void add_logical_epression_bin_dec (
 void add_compare (
                                      const char* ide_1,  // bin
                                      const char* reg_1,
-                                     const char* reg_2,
-                                     const char* ide_res // bin
+                                     const char* reg_2
                                    )
 // --> result in reg_1 
 {
@@ -2036,9 +2035,6 @@ void add_compare (
     // if true                                         |
     sprintf (operands, "%s,%s", reg_1, CR_TRUE);  //   |
     add_asm_command (CR_L1, "LH", operands);      //<- |
-    // load in res variable                       //   
-    sprintf (operands, "%s,%s", reg_1, ide_res);  //   
-    add_asm_command (CR_L0, "STH", operands);     // 
 }
 /*..........................................................................*/
 
