@@ -1,12 +1,13 @@
 #define DL_ASSTEXT 16
 #define DL_OBJTEXT 50                             /*длина об'ектн. текста   */
-#define NSYM 10                                   /*размер табл.символов    */
+#define NSYM 30                                   /*размер табл.символов    */
 #define NPOP 6                                    /*размер табл.псевдоопер. */
-#define NOP  6                                    /*размер табл.операций    */
+#define NOP  12                                   /*размер табл.операций    */
 #include <string.h>                               /*вкл.строковые подпрогр. */
 #include <stdlib.h>                               /*вкл.подпрогр.преобр.данн*/
 #include <stdio.h>                                /*вкл.подпр.станд.вв/выв  */
-#include <ctype.h>                                /*вкл.подпр.классиф.симв. */
+#include <ctype.h>
+#include <unistd.h>                                /*вкл.подпр.классиф.симв. */
 
 /*
 ******* Б Л О К  об'явлений статических рабочих переменных
@@ -16,6 +17,19 @@ char NFIL [30] = "\x0";
 
 unsigned char PRNMET = 'N';                       /*индикатор обнаруж.метки */
 int I3;                                           /*счетчик цикла           */
+
+unsigned char PL3_buf[3];                         
+unsigned char PL8_buf[8];                         /*буфер для передачи PL8  */
+
+void print_pl_value (unsigned char* buf, size_t len)
+{    
+    for ( size_t i = 0; i < len; ++i )
+    {
+        printf ("[%0X %0X]", (buf[i] & 0xF0) >> 4,
+                             (buf[i] & 0x0F));
+    }
+    printf ("\n");
+}
 
 /*
 ***** Б Л О К  об'явлений прототипов обращений к подпрограммам 1-го просмотра
@@ -45,6 +59,8 @@ int FRR();                                        /*подпр.обр.опер.RR-форм. */
 						  /*п р о т о т и п  обращ.к*/
 int FRX();                                        /*подпр.обр.опер.RX-форм. */
 /*..........................................................................*/
+int FSS();                                        /*подпр.обр.опер.SS-форм. */
+/*..........................................................................*/
 
 /*
 ***** Б Л О К  об'явлений прототипов обращений к подпрограммам 2-го просмотра
@@ -73,6 +89,9 @@ int SRR();                                        /*подпр.обр.опер.RR-форм. */
 /*..........................................................................*/
 						  /*п р о т о т и п  обращ.к*/
 int SRX();                                        /*подпр.обр.опер.RX-форм. */
+/*..........................................................................*/
+              /*п р о т о т и п  обращ.к*/
+int SSS();                                        /*подпр.обр.опер.SS-форм. */
 /*..........................................................................*/
 
 /*
@@ -139,10 +158,16 @@ int SRX();                                        /*подпр.обр.опер.RX-форм. */
     {
      {{'B','A','L','R',' '} , '\x05' , 2 , FRR} , /*инициализация           */
      {{'B','C','R',' ',' '} , '\x07' , 2 , FRR} , /*строк                   */
+     {{'C','R',' ',' ',' '} , '\x19' , 2 , FRR} , /*                        */
      {{'S','T',' ',' ',' '} , '\x50' , 4 , FRX} , /*таблицы                 */
      {{'L',' ',' ',' ',' '} , '\x58' , 4 , FRX} , /*машинных                */
      {{'A',' ',' ',' ',' '} , '\x5A' , 4 , FRX} , /*операций                */
      {{'S',' ',' ',' ',' '} , '\x5B' , 4 , FRX} , /*                        */
+     {{'C','V','B',' ',' '} , '\x4F' , 4 , FRX} , /*                        */
+     {{'L','H',' ',' ',' '} , '\x48' , 4 , FRX} , /*                        */
+     {{'B','C',' ',' ',' '} , '\x47' , 4 , FRX} , /*                        */
+     {{'S','T','H',' ',' '} , '\x40' , 4 , FRX} , /*                        */
+     {{'M','V','C',' ',' '} , '\xD2' , 6 , FSS} , /*                        */
     };
 
 /*
@@ -208,6 +233,7 @@ int SRX();                                        /*подпр.обр.опер.RX-форм. */
    {
     unsigned char BUF_OP_RR [2];                  /*оределить буфер         */
     struct OPRR OP_RR;                            /*структурировать его     */
+    int RR;
    } RR;
 
   struct OPRX                                     /*структ.буф.опер.форм.RX */
@@ -224,7 +250,22 @@ int SRX();                                        /*подпр.обр.опер.RX-форм. */
    {
     unsigned char BUF_OP_RX [4];                  /*оределить буфер         */
     struct OPRX OP_RX;                            /*структурировать его     */
+    unsigned long RX;
    } RX;
+
+  struct OPSS                                     /*структ.буф.опер.форм.SS */
+   {
+    unsigned char OP;                             /*код операции            */
+    unsigned char L1L2;                           /*L1 и L2                 */
+    short B1D1;                                   /*B1 и D1                 */
+    short B2D2;                                   /*B2 и D2                 */
+   };
+
+  union                                           /*определить об'единение  */
+   {
+    unsigned char BUF_OP_SS [6];                  /*оределить буфер         */
+    struct OPSS OP_SS;                            /*структурировать его     */
+   } SS;
 
   struct STR_BUF_ESD                              /*структ.буфера карты ESD */
    {
@@ -291,30 +332,40 @@ struct STR_BUF_END                                /*структ.буфера карты END */
 
 int FDC()                                         /*подпр.обр.пс.опер.DC    */
  {
+  int len;
+
+  switch (TEK_ISX_KARTA.STRUCT_BUFCARD.OPERAND[0])
+  {
+  case 'F' : len = 4;
+       break;
+
+  case 'H' : len = 2;
+       break;
+
+  case 'P' : if ( TEK_ISX_KARTA.STRUCT_BUFCARD.OPERAND[1] == 'L' )
+             {
+               if (TEK_ISX_KARTA.STRUCT_BUFCARD.OPERAND[2] == '3')
+                   len = 3;
+               else 
+                   len = 8;
+             }
+             else return (1);
+             break;
+
+  default  : return (1);
+  }
+
   if ( PRNMET == 'Y' )                            /*если псевдооп.DC помеч.,*/
    {                                              /*то:                     */
-    if                                            /* если псевдооперация DC */
-     (                                            /* определяет константу   */
-      TEK_ISX_KARTA.STRUCT_BUFCARD.OPERAND[0]=='F'/* типа F, то выполнить   */
-     )                                            /* следующее:             */
-     {
-      T_SYM[ITSYM].DLSYM = 4;                     /*  уст.длину симв. =  4, */
-      T_SYM[ITSYM].PRPER = 'R';                   /*  а,призн.перемест.='R' */
-      if ( CHADR % 4 )                            /*  и, если CHADR не указ.*/
-       {                                          /*  на границу слова, то: */
-	CHADR = (CHADR /4 + 1) * 4;               /*   уст.CHADR на гр.сл. и*/
-	T_SYM[ITSYM].ZNSYM = CHADR;               /*   запомн. в табл.симв. */
-       }
-      PRNMET = 'N';                               /*  занулить PRNMET зн.'N'*/
-     }
-    else
-     return (1);                                  /* иначе выход по ошибке  */
+     T_SYM[ITSYM].DLSYM = len;                    /*  уст.длину симв. =  4, */
+     T_SYM[ITSYM].PRPER = 'R';                    /*  а,призн.перемест.='R' */
+  T_SYM[ITSYM].ZNSYM = CHADR;                  /*   запомн. в табл.симв. */
+      //}
+     PRNMET = 'N';                                /*  занулить PRNMET зн.'N'*/
    }
-  else                                            /*если же псевдооп.непомеч*/
-   if ( CHADR % 4 )                               /*и CHADR не кратен 4,то: */
-    CHADR = (CHADR /4 + 1) * 4;                   /* установ.CHADR на гр.сл.*/
 
-  CHADR = CHADR + 4;                              /*увелич.CHADR на 4 и     */
+  CHADR = CHADR + len;                            /*увелич.CHADR на len и   */
+
   return (0);                                     /*успешно завершить подпр.*/
  }
 /*..........................................................................*/
@@ -420,85 +471,217 @@ int FRX()                                         /*подпр.обр.опер.RX-форм. */
   return(0);                                      /*выйти из подпрограммы   */
  }
 /*..........................................................................*/
+int FSS()                                         /*подпр.обр.опер.SS-форм. */
+ {
+  CHADR = CHADR + 6;                              /*увеличить сч.адр. на 6  */
+  if ( PRNMET == 'Y' )                            /*если ранее обнар.метка, */
+   {                                              /*то в табл. символов:    */
+    T_SYM[ITSYM].DLSYM = 6;                       /*запомнить длину маш.опер*/
+    T_SYM[ITSYM].PRPER = 'R';                     /*и установить призн.перем*/
+   }
+  return(0);                                      /*выйти из подпрограммы   */
+ }
+/*..........................................................................*/
 
 /*
 ******* Б Л О К  об'явлений подпрограмм, используемых при 2-ом просмотре
 */
 
-void STXT( int ARG )                              /*подпр.формир.TXT-карты  */
+void STXT( int ARG ,int flag )                              /*подпр.формир.TXT-карты  */
  {
   char *PTR;                                      /*рабоч.переменная-указат.*/
-
+  if(flag == 1)
+  {
+//    printf("dddd");  
+     if (CHADR % 4) {
+       CHADR = (CHADR /4 + 1) * 4;   
+     }
+      return;
+  }
   PTR = (char *)&CHADR;                           /*формирование поля ADOP  */
   TXT.STR_TXT.ADOP[2]  = *PTR;                    /*TXT-карты в формате     */
   TXT.STR_TXT.ADOP[1]  = *(PTR+1);                /*двоичного целого        */
   TXT.STR_TXT.ADOP[0]  = '\x00';                  /*в соглашениях ЕС ЭВМ    */
 
+  memset ( TXT.STR_TXT.OPER, 0x40, 56 );
+
   if ( ARG == 2 )                                 /*формирование поля OPER  */
    {
-    memset ( TXT.STR_TXT.OPER , 64 , 4 );
     memcpy ( TXT.STR_TXT.OPER,RR.BUF_OP_RR , 2 ); /* для RR-формата         */
     TXT.STR_TXT.DLNOP [1] = 2;
    }
-  else
+  else if ( ARG == 3 )
+   {
+    memcpy ( TXT.STR_TXT.OPER , PL3_buf , 3);   /* для PL3         */
+    TXT.STR_TXT.DLNOP [1] = 3 ;
+
+   }
+  else if ( ARG == 4 )
    {
     memcpy ( TXT.STR_TXT.OPER , RX.BUF_OP_RX , 4);/* для RX-формата         */
     TXT.STR_TXT.DLNOP [1] = 4;
    }
-  memcpy (TXT.STR_TXT.POLE9,ESD.STR_ESD.POLE11,8);/*формиров.идентифик.поля */
+  else if ( ARG == 6 )
+   {
+    memcpy ( TXT.STR_TXT.OPER , SS.BUF_OP_SS , 6);/* для RX-формата         */
+    TXT.STR_TXT.DLNOP [1] = 6;
+   }
+  else
+   { if ( ARG == 8 ){
+    memcpy ( TXT.STR_TXT.OPER , PL8_buf , 8);     /* для PL8                */
+  TXT.STR_TXT.DLNOP [1] = 8;}
+   }
 
+  memcpy (TXT.STR_TXT.POLE9,ESD.STR_ESD.POLE11,8);/*формиров.идентифик.поля */
   memcpy ( OBJTEXT[ITCARD] , TXT.BUF_TXT , 80 );  /*запись об'ектной карты  */
   ITCARD += 1;                                    /*коррекц.инд-са своб.к-ты*/
   CHADR = CHADR + ARG;                            /*коррекц.счетчика адреса */
   return;
  }
+/*..........................................................................*/
 
 int SDC()                                         /*подпр.обр.пс.опер.DC    */
  {
   char *RAB;                                      /*рабочая переменная      */
 
-  RX.OP_RX.OP   = 0;                              /*занулим два старших     */
-  RX.OP_RX.R1X2 = 0;                              /*байта RX.OP_RX          */
   if
     (                                             /* если операнд начинается*/
      !memcmp(TEK_ISX_KARTA.STRUCT_BUFCARD.OPERAND,/* с комбинации           */
-	      "F'", 2)                            /* F',                    */
+        "F'", 2)                                /* F',                    */
     )                                             /* то                     */
    {
     RAB=strtok                                    /*в перем. c указат.RAB   */
-	 (                                        /*выбираем первую лексему */
+   (                                        /*выбираем первую лексему */
     (char*)TEK_ISX_KARTA.STRUCT_BUFCARD.OPERAND+2,/*операнда текущей карты  */
-	  "'"                                     /*исх.текста АССЕМБЛЕРА   */
-	 );
+    "'"                                     /*исх.текста АССЕМБЛЕРА   */
+   );
 
-    RX.OP_RX.B2D2 = atoi ( RAB );                 /*перевод ASCII-> int     */
-    RAB = (char *) &RX.OP_RX.B2D2;                /*приведение к соглашениям*/
-    swab ( RAB , RAB , 2 );                       /* ЕС ЭВМ                 */
+    RX.RX = atol ( RAB );                         /*перевод ASCII-> int     */
+    RAB = (char *) &RX.RX;                        
+    char temp[4];
+    swab ( RAB , (char *)&temp[2] , 2 );
+    swab ( (char *) &RAB[2] , temp , 2 );
+    memcpy ( RAB, temp, 4);                       
+
+    STXT (4,0);                                     /*формирование TXT-карты  */
    }
-  else                                            /*иначе                   */
-   return (1);                                    /*сообщение об ошибке     */
+  if
+    (                                             /* если операнд начинается*/
+     !memcmp(TEK_ISX_KARTA.STRUCT_BUFCARD.OPERAND,/* с комбинации           */
+        "H'", 2)                            /* H',                    */
+    )                                             /* то                     */
+   {
+    RAB=strtok                                    /*в перем. c указат.RAB   */
+   (                                        /*выбираем первую лексему */
+    (char*)TEK_ISX_KARTA.STRUCT_BUFCARD.OPERAND+2,/*операнда текущей карты  */
+    ".'"                                     /*исх.текста АССЕМБЛЕРА   */
+   );
 
-  STXT (4);                                       /*формирование TXT-карты  */
+    RR.RR = atoi ( RAB );                         /*перевод ASCII-> int     */
+    RAB = (char *) &RR.RR;                        /*приведение к соглашениям*/
+    swab ( RAB , RAB , 2 );                       /* ЕС ЭВМ                 */
 
+    STXT (2,0);                                     /*формирование TXT-карты  */
+   }
+if
+    (                                             /* если операнд начинается*/
+     !memcmp(TEK_ISX_KARTA.STRUCT_BUFCARD.OPERAND,/* с комбинации           */
+        "PL", 2)                                /* PL,                    */
+    )                                             /* то                     */
+   {
+  char znak = 0xF;
+  int ind = 4;
+  int len, i, ost;
+
+  if (TEK_ISX_KARTA.STRUCT_BUFCARD.OPERAND[2]=='3')
+    len = 3;
+  else 
+    len = 8;
+
+  if (TEK_ISX_KARTA.STRUCT_BUFCARD.OPERAND[4] == '+')
+    znak = 0xC;
+  else if (TEK_ISX_KARTA.STRUCT_BUFCARD.OPERAND[4] == '-')
+    znak = 0xD;
+
+  i = 0;
+  while ( TEK_ISX_KARTA.STRUCT_BUFCARD.OPERAND[4+i] != '\'' )
+  {
+    i++;
+    ind++;
+  } 
+
+  char BUFF[8];
+  memset (BUFF, 0, 8);
+  BUFF[len-1] = znak;
+
+  for (i=1; i<len*2;i++,ind--)
+  {
+    if ( TEK_ISX_KARTA.STRUCT_BUFCARD.OPERAND[ind-1] == '\'' ||
+       TEK_ISX_KARTA.STRUCT_BUFCARD.OPERAND[ind-1] == '-' )
+      break;
+
+    ost = i % 2;
+
+    char digit = TEK_ISX_KARTA.STRUCT_BUFCARD.OPERAND[ind-1] - 48;
+
+    if ( ost )
+    {
+      BUFF[len-1-(i-ost)/2] += digit << 4;
+    }
+    else
+    {
+      BUFF[len-1-i/2] = digit;
+    }
+  }
+ 
+    printf ("current %d\n", CHADR);
+  
+    if (len == 4)
+     {
+      memcpy(RX.BUF_OP_RX, BUFF, 4);
+      STXT (4,0);                                   /*формирование TXT-карты  */
+     }
+  else if (len == 3)
+     {
+       memcpy(PL3_buf, BUFF, 3);
+       print_pl_value (PL3_buf, 3);
+       STXT (3,0);
+     }
+    else if (len == 8)
+     {
+       memcpy(PL8_buf, BUFF, 8);
+       print_pl_value (PL8_buf, 8);
+       STXT (8,0);
+     }
+   }
 
   return (0);                                     /*успешн.завершение подпр.*/
  }
 /*..........................................................................*/
 int SDS()                                         /*подпр.обр.пс.опер.DS    */
  {
-
   RX.OP_RX.OP   = 0;                              /*занулим два старших     */
   RX.OP_RX.R1X2 = 0;                              /*байта RX.OP_RX          */
   if
     (                                             /* если операнд начинается*/
-     TEK_ISX_KARTA.STRUCT_BUFCARD.OPERAND[0]=='F' /* с комбинации F'        */
+     TEK_ISX_KARTA.STRUCT_BUFCARD.OPERAND[0]=='F' /* с комбинации F' или 0F */
     )                                             /* то:                    */
-   RX.OP_RX.B2D2 = 0;                             /*занулим RX.OP_RX.B2D2   */
+   { 
+     RX.OP_RX.B2D2 = 0;                           /*занулим RX.OP_RX.B2D2   */
+     STXT (4,0);                                    /*формирование TXT-карты  */
+   
+  }
   else                                            /*иначе                   */
-   return (1);                                    /*сообщение об ошибке     */
-
-  STXT (4);                                       /*формирование TXT-карты  */
-
+    if 
+      (
+       TEK_ISX_KARTA.STRUCT_BUFCARD.OPERAND[0]!='0'
+      )
+  {
+    return (1);}                                  /*сообщение об ошибке     */
+  //printf("dfffd");
+     
+  STXT (0,1);                                    /*формирование TXT-карты  */
+   
   return (0);                                     /*успешно завершить подпр.*/
  }
 /*..........................................................................*/
@@ -726,7 +909,7 @@ int SRR()                                         /*подпр.обр.опер.RR-форм. */
   RR.OP_RR.R1R2 = R1R2;                           /*формируем опер-ды маш-ой*/
 						  /*команды                 */
 
-  STXT(2);
+  STXT(2, 0);
   return(0);                                      /*выйти из подпрограммы   */
  }
 
@@ -834,10 +1017,97 @@ int SRX()                                         /*подпр.обр.опер.RX-форм. */
 
   RX.OP_RX.R1X2 = R1X2;                           /*дозапись перв.операнда  */
 
-  STXT(4);                                        /*формирование TXT-карты  */
+  STXT(4, 0);                                        /*формирование TXT-карты  */
   return(0);                                      /*выйти из подпрограммы   */
  }
 /*..........................................................................*/
+
+ /* return index in identifier's table or -1 if value doesn't exist */
+ 
+ int get_symbol_index (const char* METKA) 
+ {
+     for (int i = 0; i<=ITSYM; i++ ) 
+     {                        
+       if(!strncmp ( METKA , (char*) T_SYM[i].IMSYM, 8 )) 
+       {
+           return i;
+       }
+     }
+     
+     return -1;
+ }
+
+/* return absolute addr from relative or -1 on error */
+
+int get_full_addr (int relative_addr)
+{
+    int NBASRG = 0;        
+    int DELTA  = 0xFFF - 1;
+    
+    for (int I=0; I<15; I++)  
+    {                       
+        if (            
+            T_BASR[I].PRDOST == 'Y'                 &&                      
+            relative_addr - T_BASR[I].SMESH >= 0    &&                          
+            relative_addr - T_BASR[I].SMESH < DELTA
+        )                              
+        {
+            NBASRG = I + 1;
+            DELTA  = relative_addr - T_BASR[I].SMESH;
+        }
+    }
+    
+    if ( NBASRG == 0 || DELTA > 0xFFF ) 
+    {
+        return -1;                          
+    }
+    else                                
+    {                                   
+        return (NBASRG << 12) + DELTA;                                
+    }
+}
+ 
+ /*..........................................................................*/
+int SSS()                                         /*подпр.обр.опер.SS-форм. */
+{
+  SS.OP_SS.OP = T_MOP[I3].CODOP;
+  
+  printf ("%s\n", (char*)TEK_ISX_KARTA.STRUCT_BUFCARD.OPERAND);
+  char op1[8], op2[8];
+  int offset, length, B1D1, B2D2;
+
+  if (4 == sscanf ((char*)TEK_ISX_KARTA.STRUCT_BUFCARD.OPERAND, "%8[^+]+%d(%d),%8s", op1, &offset, &length, op2)) {
+        printf ("%s %s %d %d\n", op1, op2, offset, length);
+
+        int ide1, ide2;
+        if ((ide1 = get_symbol_index(op1)) < 0 || (ide2 = get_symbol_index(op2)) < 0) {
+            return 2;
+        }
+        
+        B1D1 = get_full_addr(T_SYM[ide1].ZNSYM) + offset;
+        if (-1 == B1D1) { printf ("bad addr of first operand\n"); return 2; }
+        swab ( &B1D1 , &B1D1 , 2 );              
+        
+        B2D2 = get_full_addr(T_SYM[ide2].ZNSYM);                 
+        if (-1 == B2D2) { printf ("bad addr of second operand\n"); return 2; }
+        swab ( &B2D2 , &B2D2 , 2 );
+        
+        SS.OP_SS.L1L2 = length - 1;
+        SS.OP_SS.B1D1 = B1D1;
+        SS.OP_SS.B2D2 = B2D2;
+        
+        printf ("%d(%0X) %d(%0X)\n", ide1, B1D1, ide2, B2D2);
+  }
+  else
+  {
+        printf ("bad command format");
+        return 2; // another error code?
+  }
+
+  STXT(6,0); 
+  return 0;
+}
+
 int SOBJFILE()                                    /*подпрогр.формир.об'екн. */
  {                                                /*файла                   */
   FILE *fp;                                       /*набор рабочих           */
