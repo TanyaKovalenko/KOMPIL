@@ -441,13 +441,11 @@ struct
 
  {/*.  235     .*/   236 ,     0 , "=  " ,    0 },
  {/*.  236     .*/   237 ,   235 , "ZNK" ,    0 },
- {/*.  237     .*/     0 ,   236 , "*  " ,    0 },
+ {/*.  237     .*/     0 ,   236 , "*  " ,    0 },	
 
- /* for paranthesis */
- 
  {/*.  238     .*/   239 ,   235 , "CIF" ,  241 },
- {/*.  239     .*/   240 ,   239 , "AVI" ,    0 },
- {/*.  240     .*/     0 ,   240 , "*  " ,    0 },
+ {/*.  239     .*/   240 ,   238 , "AVI" ,    0 },
+ {/*.  240     .*/     0 ,   239 , "*  " ,    0 },
 
  {/*.  241     .*/   242 ,   241 , "AVI" ,    0 },
  {/*.  242     .*/   243 ,   242 , "AVI" ,    0 },
@@ -1416,7 +1414,7 @@ int AVI2 ()
 						     36 );
 		  ZKARD ();
 		  add_compare(SYM[i].NAME, "RRAB", "RTMP");  
-		  ZKARD ();                             /* запоминание ассембле-  */
+		                               /* запоминание ассембле-  */
 							  /* ровской операции       */
 		  return 0;
 		 }
@@ -1473,7 +1471,8 @@ int AVI2 ()
 		if (isDEC == 1)
 		{
 			add_mult_expression(FORMT [IFORMT-2], CR_5);
-		     	add_logical_epression_bin_dec(SYM[i].NAME, "RRAB", DEC_MEM);   
+			
+		     	add_logical_epression_bin_dec(FORMT [IFORMT-2], "RRAB", DEC_MEM);   
 		     	return 0;
 		}
 		else
@@ -1702,6 +1701,13 @@ int OEN2 ()
 						  /* ределяющих базовый и   */
 						  /* рабочий регистры общего*/
 						  /* назначения             */
+
+  memcpy ( ASS_CARD._BUFCARD.METKA, "RTMP", 4 ); /* формирование EQU-псев- */
+  memcpy ( ASS_CARD._BUFCARD.OPERAC, "EQU", 3 );   /* дооперации определения */
+  memcpy ( ASS_CARD._BUFCARD.OPERAND, "2", 1 );  /* номера базового регист-*/
+						  /* ра общего назначения   */
+						  /*           и            */
+  ZKARD ();                                       /* запоминание ее         */
 
   memcpy ( ASS_CARD._BUFCARD.METKA, "RBASE", 5 ); /* формирование EQU-псев- */
   memcpy ( ASS_CARD._BUFCARD.OPERAC, "EQU", 3 );   /* дооперации определения */
@@ -2029,7 +2035,7 @@ void add_compare (
     add_asm_command ("", "BC", "8," CR_L1);       // ---
     // if false - load false in operand                |
     sprintf (operands, "%s,%s", reg_1, CR_FALSE); //   |
-    add_asm_command ("", "LH", operands);         //   |
+    add_asm_command (CR_L0, "LH", operands);         //   |
     // go to res0                                      |
     add_asm_command ("", "BC", "15," CR_L0);      // ->|
     // if true                                         |
