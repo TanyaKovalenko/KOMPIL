@@ -168,7 +168,7 @@ int SSS();                                        /*подпр.обр.опер.SS-форм. */
      {{'B','C',' ',' ',' '} , '\x47' , 2 , FRR} , /*                        */
      {{'S','T','H',' ',' '} , '\x40' , 4 , FRX} , /*                        */
      {{'M','V','C',' ',' '} , '\xD2' , 6 , FSS} , /*                        */
-     {{'M','P',' ',' ',' '} , '\x5C' , 4 , FRR} , /*                        */
+     {{'M','P',' ',' ',' '} , '\x5C' , 6 , FSS} , /*                        */
     };
 
 /*
@@ -1075,13 +1075,36 @@ int SSS()                                         /*подпр.обр.опер.SS-форм. */
   
   printf ("%s\n", (char*)TEK_ISX_KARTA.STRUCT_BUFCARD.OPERAND);
   char op1[8], op2[8];
-  int offset, length, B1D1, B2D2;
+  int offset = 0, length = 3, B1D1, B2D2;
 
   if (4 == sscanf ((char*)TEK_ISX_KARTA.STRUCT_BUFCARD.OPERAND, "%8[^+]+%d(%d),%8s", op1, &offset, &length, op2)) {
-        printf ("%s %s %d %d\n", op1, op2, offset, length);
+        printf ("1 %s %s %d %d\n", op1, op2, offset, length);
 
         int ide1, ide2;
         if ((ide1 = get_symbol_index(op1)) < 0 || (ide2 = get_symbol_index(op2)) < 0) {
+        	printf ("er21\n");
+            return 2;
+        }
+        
+        B1D1 = get_full_addr(T_SYM[ide1].ZNSYM) + offset;
+        if (-1 == B1D1) { printf ("bad addr of first operand\n"); return 2; }
+        swab ( &B1D1 , &B1D1 , 2 );              
+        
+        B2D2 = get_full_addr(T_SYM[ide2].ZNSYM);                 
+        if (-1 == B2D2) { printf ("bad addr of second operand\n"); return 2; }
+        swab ( &B2D2 , &B2D2 , 2 );
+        
+        SS.OP_SS.L1L2 = length - 1;
+        SS.OP_SS.B1D1 = B1D1;
+        SS.OP_SS.B2D2 = B2D2;
+        
+        printf ("%d(%0X) %d(%0X)\n", ide1, B1D1, ide2, B2D2);
+  } else if (2 == sscanf ((char*)TEK_ISX_KARTA.STRUCT_BUFCARD.OPERAND, "%[^,],%s", op1, op2)) {
+        printf ("1 %s %s %d %d\n", op1, op2, offset, length);
+
+        int ide1, ide2;
+        if ((ide1 = get_symbol_index(op1)) < 0 || (ide2 = get_symbol_index(op2)) < 0) {
+        	printf ("er22\n");
             return 2;
         }
         
@@ -1101,6 +1124,8 @@ int SSS()                                         /*подпр.обр.опер.SS-форм. */
   }
   else
   {
+  	//printf("sscanf= %d\n",sscanf ((char*)TEK_ISX_KARTA.STRUCT_BUFCARD.OPERAND, "%[^,],%s", op1, op2));
+  	//printf("%s    ,    %s  111\n", op1, op2);
         printf ("bad command format");
         return 2; // another error code?
   }
@@ -1344,7 +1369,7 @@ CONT3:
  T_MOP[9].BXPROG  = SRR;
  T_MOP[10].BXPROG = SRX;
  T_MOP[11].BXPROG = SSS;
- T_MOP[12].BXPROG = SRR;
+ T_MOP[12].BXPROG = SSS;
 
  T_POP[0].BXPROG = SDC;                           /*установить указатели    */
  T_POP[1].BXPROG = SDS;                           /*на подпрограммы обраб-ки*/
