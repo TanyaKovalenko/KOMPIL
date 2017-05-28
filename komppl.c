@@ -31,7 +31,7 @@
 #define CR_L1    "@ON_T"
 #define CR_L0    "@ON_F"
 #define DEC_MEM  "$B"
-#define DEC_REG  "RTMP"
+#define DEC_REG  "@RTMP"
 
 /*
 ***** Б а з а  данных компилятора
@@ -1314,7 +1314,7 @@ int AVI2 ()
 						  /* ровской операции L     */
 
 	    strcpy ( ASS_CARD._BUFCARD.OPERAND,   /*       формируем        */
-					"RRAB," );/*       первый  и        */
+					"@RRAB," );/*       первый  и        */
 	    strcat ( ASS_CARD._BUFCARD.OPERAND,   /* второй операнды ассемб-*/
 				       FORMT [0]);/* леровской операции     */
 
@@ -1403,7 +1403,7 @@ int AVI2 ()
 		    memcpy( ASS_CARD._BUFCARD.OPERAC,/* иначе - "S"            */
 					 "L", 1 );
 	          strcpy ( ASS_CARD._BUFCARD.OPERAND,   /* - первый операнд ассем-*/
-					"RTMP," );/*блеровской операции;    */
+					"@RTMP," );/*блеровской операции;    */
 		  strcat ( ASS_CARD._BUFCARD.OPERAND,   /* - второй операнд ассем-*/
 				       FORMT [IFORMT-1] );/*блеровской операции;    */
 		  ASS_CARD._BUFCARD.OPERAND [ strlen
@@ -1413,7 +1413,7 @@ int AVI2 ()
 		   "Формирование промежуточного значения",/* - построчный коментарий*/
 						     36 );
 		  ZKARD ();
-		  add_compare(SYM[i].NAME, "RRAB", "RTMP");  
+		  add_compare(SYM[i].NAME, "@RRAB", "@RTMP");  
 		                               /* запоминание ассембле-  */
 							  /* ровской операции       */
 		  return 0;
@@ -1429,7 +1429,7 @@ int AVI2 ()
 						  /* ошибке                 */ 
 						  /* формируем:             */
 	    strcpy ( ASS_CARD._BUFCARD.OPERAND,   /* - первый операнд ассем-*/
-					"RRAB," );/*блеровской операции;    */
+					"@RRAB," );/*блеровской операции;    */
 	    strcat ( ASS_CARD._BUFCARD.OPERAND,   /* - второй операнд ассем-*/
 			       FORMT [IFORMT-1] );/*блеровской операции;    */
 	    ASS_CARD._BUFCARD.OPERAND [ strlen
@@ -1472,7 +1472,7 @@ int AVI2 ()
 		{
 			add_mult_expression(FORMT [IFORMT-2], CR_5);
 			
-		     	add_logical_epression_bin_dec(FORMT [IFORMT-2], "RRAB", DEC_MEM);   
+		     	add_logical_epression_bin_dec(FORMT [IFORMT-2], "@RRAB", DEC_MEM);   
 		     	return 0;
 		}
 		else
@@ -1702,21 +1702,21 @@ int OEN2 ()
 						  /* рабочий регистры общего*/
 						  /* назначения             */
 
-  memcpy ( ASS_CARD._BUFCARD.METKA, "RTMP", 4 ); /* формирование EQU-псев- */
+  memcpy ( ASS_CARD._BUFCARD.METKA, "@RTMP", 4 ); /* формирование EQU-псев- */
   memcpy ( ASS_CARD._BUFCARD.OPERAC, "EQU", 3 );   /* дооперации определения */
   memcpy ( ASS_CARD._BUFCARD.OPERAND, "2", 1 );  /* номера базового регист-*/
 						  /* ра общего назначения   */
 						  /*           и            */
   ZKARD ();                                       /* запоминание ее         */
 
-  memcpy ( ASS_CARD._BUFCARD.METKA, "RBASE", 5 ); /* формирование EQU-псев- */
+  memcpy ( ASS_CARD._BUFCARD.METKA, "@RBASE", 5 ); /* формирование EQU-псев- */
   memcpy ( ASS_CARD._BUFCARD.OPERAC, "EQU", 3 );   /* дооперации определения */
   memcpy ( ASS_CARD._BUFCARD.OPERAND, "15", 2 );  /* номера базового регист-*/
 						  /* ра общего назначения   */
 						  /*           и            */
   ZKARD ();                                       /* запоминание ее         */
 
-  memcpy ( ASS_CARD._BUFCARD.METKA, "RRAB", 4 );  /* формирование EQU-псев- */
+  memcpy ( ASS_CARD._BUFCARD.METKA, "@RRAB", 4 );  /* формирование EQU-псев- */
   memcpy ( ASS_CARD._BUFCARD.OPERAC, "EQU", 3 );   /* дооперации определения */
   memcpy ( ASS_CARD._BUFCARD.OPERAND, "5", 1 );   /* номера базового регист-*/
 						  /* ра общего назначения   */
@@ -1777,7 +1777,7 @@ int OPA2 ()
 					"ST", 2 );
 
 	    strcpy ( ASS_CARD._BUFCARD.OPERAND,   /*       доформировать    */
-					"RRAB," );/*          операнды      */
+					"@RRAB," );/*          операнды      */
 
 	    strcat ( ASS_CARD._BUFCARD.OPERAND,   /*           команды      */
 				      FORMT [0]) ;
@@ -1998,7 +1998,7 @@ void add_mult_expression (
 {
     char operands [16];
     // mult ide_2 and 5
-    sprintf (operands, "%s,%s", ide_1, ide_2);
+    sprintf (operands, "%s(3),%s(3)", ide_1, ide_2);
     add_asm_command ("", "MP", operands);
 }
 
@@ -2035,9 +2035,9 @@ void add_compare (
     add_asm_command ("", "BC", "8," CR_L1);       // ---
     // if false - load false in operand                |
     sprintf (operands, "%s,%s", reg_1, CR_FALSE); //   |
-    add_asm_command (CR_L0, "LH", operands);         //   |
     // go to res0                                      |
     add_asm_command ("", "BC", "15," CR_L0);      // ->|
+    add_asm_command (CR_L0, "LH", operands);         //   |
     // if true                                         |
     sprintf (operands, "%s,%s", reg_1, CR_TRUE);  //   |
     add_asm_command (CR_L1, "LH", operands);      //<- |
