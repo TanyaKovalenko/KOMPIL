@@ -30,7 +30,7 @@
 #define CR_5 "@5"
 #define CR_L1    "@ON_T"
 #define CR_L0    "@ON_F"
-#define DEC_MEM  "$B"
+#define DEC_MEM  "@B"
 #define DEC_REG  "@RTMP"
 
 /*
@@ -1702,16 +1702,18 @@ int OEN2 ()
 						  /* рабочий регистры общего*/
 						  /* назначения             */
 
-  memcpy ( ASS_CARD._BUFCARD.METKA, "@RTMP", 5 ); /* формирование EQU-псев- */
-  memcpy ( ASS_CARD._BUFCARD.OPERAC, "EQU", 3 );   /* дооперации определения */
-  memcpy ( ASS_CARD._BUFCARD.OPERAND, "2", 1 );  /* номера базового регист-*/
-						  /* ра общего назначения   */
-						  /*           и            */
-  ZKARD ();                                       /* запоминание ее         */
+
 
   memcpy ( ASS_CARD._BUFCARD.METKA, "@RBASE", 6 ); /* формирование EQU-псев- */
   memcpy ( ASS_CARD._BUFCARD.OPERAC, "EQU", 3 );   /* дооперации определения */
   memcpy ( ASS_CARD._BUFCARD.OPERAND, "15", 2 );  /* номера базового регист-*/
+						  /* ра общего назначения   */
+						  /*           и            */
+  ZKARD ();                                       /* запоминание ее         */
+
+  memcpy ( ASS_CARD._BUFCARD.METKA, "@RTMP", 5 ); /* формирование EQU-псев- */
+  memcpy ( ASS_CARD._BUFCARD.OPERAC, "EQU", 3 );   /* дооперации определения */
+  memcpy ( ASS_CARD._BUFCARD.OPERAND, "6", 1 );  /* номера базового регист-*/
 						  /* ра общего назначения   */
 						  /*           и            */
   ZKARD ();                                       /* запоминание ее         */
@@ -1772,10 +1774,13 @@ int OPA2 ()
 	     memcpy ( ASS_CARD._BUFCARD.OPERAC,   /* сформировать команду   */
 				       "STH", 3 );/* записи полуслова       */
 
-	    else                                  /* иначе:                 */
-	     memcpy ( ASS_CARD._BUFCARD.OPERAC,   /* команду записи слова   */
+	    else             
+		{                    
+			memcpy ( ASS_CARD._BUFCARD.METKA,   CR_L0,     5); /* иначе:                 */
+	     		memcpy ( ASS_CARD._BUFCARD.OPERAC,   /* команду записи слова   */
 					"ST", 2 );
-
+			
+		}
 	    strcpy ( ASS_CARD._BUFCARD.OPERAND,   /*       доформировать    */
 					"@RRAB," );/*          операнды      */
 
@@ -1839,14 +1844,14 @@ int OPR2 ()
 
   memcpy ( ASS_CARD._BUFCARD.OPERAC, "BALR", 4 ); /* формируем BALR-операцию*/
   memcpy ( ASS_CARD._BUFCARD.OPERAND,             /* Ассемблера             */
-				  "RBASE,0", 7 );
+				  "@RBASE,0", 8 );
   memcpy ( ASS_CARD._BUFCARD.COMM,
 		  "Загрузить регистр базы", 22 );
   ZKARD ();                                       /* и запоминаем ее        */
 
   memcpy ( ASS_CARD._BUFCARD.OPERAC, "USING", 5 );/* формируем USING-псевдо-*/
   memcpy ( ASS_CARD._BUFCARD.OPERAND,             /* операцию Ассемблера    */
-				   "*,RBASE", 7 );
+				   "*,@RBASE", 8 );
   memcpy ( ASS_CARD._BUFCARD.COMM,
 		  "Назначить регистр базой", 23 );
   ZKARD ();                                       /* и запоминаем ее        */
@@ -2034,10 +2039,10 @@ void add_compare (
     // if true
     add_asm_command ("", "BC", "8," CR_L1);       // ---
     // if false - load false in operand                |
-    sprintf (operands, "%s,%s", reg_1, CR_FALSE); //   |
+    sprintf (operands, "%s,%s", reg_1, CR_FALSE); //   |    
+    add_asm_command ("", "LH", operands);         //   |
     // go to res0                                      |
     add_asm_command ("", "BC", "15," CR_L0);      // ->|
-    add_asm_command (CR_L0, "LH", operands);         //   |
     // if true                                         |
     sprintf (operands, "%s,%s", reg_1, CR_TRUE);  //   |
     add_asm_command (CR_L1, "LH", operands);      //<- |
