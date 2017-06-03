@@ -8,7 +8,7 @@ komppl.exe: komppl.c
 	@echo "____________________________________________________________"
 kompassr.exe: kompassr.c
 	@echo "________k o m p a s s r . e x e    g e n e r a t i o n______"
-	gcc -std=c99 -o kompassr.exe kompassr.c
+	gcc -std=c99 -o kompassr.exe kompassr_new.c
 	@echo "____________________________________________________________"
 absloadm.exe: absloadm.c
 	@echo "________a b s l o a d m . e x e    g e n e r a t i o n______"
